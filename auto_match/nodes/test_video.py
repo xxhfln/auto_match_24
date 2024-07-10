@@ -33,24 +33,25 @@ def onnx():
 
 def test_img():
     # 训练好的模型权重路径
-    model = YOLO("YOLOv8/runs/detect/train1/weights/best.pt")
+    model = YOLO("../../model/best.pt")
     # 测试图片的路径
-    img = cv2.imread("YOLOv8/7.jpg")
+    img = cv2.imread("../../images/时钟.png")
     res = model(img)
     ann = res[0].plot()
+    print(res)
     while True:
         cv2.imshow("yolo", ann)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
     # 设置保存图片的路径
-    cur_path = sys.path[0]
-    print(cur_path, sys.path)
+    # cur_path = sys.path[0]
+    # print(cur_path, sys.path)
 
-    if os.path.exists(cur_path):
-        cv2.imwrite(cur_path + os.sep + "out.jpg", ann)
-    else:
-        os.mkdir(cur_path)
-        cv2.imwrite(cur_path + os.sep + "out.jpg", ann)
+    # if os.path.exists(cur_path):
+    #     cv2.imwrite(cur_path + os.sep + "out.jpg", ann)
+    # else:
+    #     os.mkdir(cur_path)
+    #     cv2.imwrite(cur_path + os.sep + "out.jpg", ann)
 
 
 def predict():
@@ -82,12 +83,24 @@ def test_video():
     while cap.isOpened():
         ret, frame = cap.read()
         if ret:
-            res = model(frame, conf=0.6)
-            ann = res[0].plot()
-            # ann = cv2.resize(ann, (960, 540))
-            # print(ann.shape)
-            cv2.imshow("yolo", ann)
-            # out.write(ann)
+            results = model.predict(frame, conf=0.6)
+            for r in results:
+                box = r.boxes
+                xywh = box.xywh.numpy().astype(int)
+
+                print(box.conf.numpy().astype(float))
+                # print('xywh:')
+                # print(xywh)
+                cls = box.cls
+                # print('cls:')
+                # print(cls.numpy().astype(int))
+
+                for box in xywh:
+                    point1 = (int(box[0] - box[2] / 2), int(box[1] - box[3] / 2))
+                    point2 = (int(box[0] + box[2] / 2), int(box[1] + box[3] / 2))
+                    cv2.rectangle(frame, point1, point2, (0, 255, 0), 2)
+
+            cv2.imshow("yolo", frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
     cv2.destroyAllWindows()
