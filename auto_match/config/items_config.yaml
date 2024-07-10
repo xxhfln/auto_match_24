@@ -3,5 +3,8 @@ items:
   clock: 1
   glass: 2
 objects:
-  objects_a: bear clock glass
+  objects_a: bear
+  objects_b: clock
+  objects_c: glass
+
 

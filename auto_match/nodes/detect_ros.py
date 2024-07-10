@@ -28,6 +28,7 @@ from vision_msgs.msg import Detection2D, Detection2DArray, ObjectHypothesisWithP
 # import object_detection
 # from object_detection.utils import label_map_util
 # from object_detection.utils import visualization_utils as vis_util
+import torch
 from ultralytics import YOLO
 
 # SET FRACTION OF GPU YOU WANT TO USE HERE
@@ -44,6 +45,9 @@ PACKAGE_PATH = os.path.join(rospack.get_path('auto_match'))
 MODEL_NAME = 'best.pt'
 # # By default models are stored in data/models/
 MODEL_PATH = os.path.join(PACKAGE_PATH, 'model', MODEL_NAME)
+
+model = YOLO(MODEL_PATH)
+
 # # Path to frozen detection graph. This is the actual model that is used for the object detection.
 # PATH_TO_CKPT = MODEL_PATH + '/frozen_inference_graph.pb'
 # ######### Set the label map file here ###########
@@ -85,7 +89,7 @@ class Detector:
         self.bridge = CvBridge()
         self.image_sub = rospy.Subscriber("image", Image, self.image_cb, queue_size=1, buff_size=2 ** 24)
         # self.sess = tf.compat.v1.Session(graph=detection_graph, config=config)
-        self.model = YOLO(MODEL_PATH)
+        
 
     def image_cb(self, data):
         # print("11111\n")
@@ -96,19 +100,27 @@ class Detector:
         except CvBridgeError as e:
             print(e)
         image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
-        results = self.model.predict(cv_image,conf=0.6)
-        image_plot = results[0].plot()
+        results = model.predict(cv_image,conf=0.6)
 
+        # new_box = [100, 100, 100, 100]  
+        # results.boxes.xyxy[0] = torch.tensor(new_box)
 
-        objArray.detections = []
-        objArray.header = data.header
-        object_count = 1
+        # results = model(cv_image)
+        image_plot = results[0].plot(labels=True,line_width=3)   #labels=False,line_width=10
 
-        for i in range(len(results)):
-            object_count += 1
-            objArray.detections.append(self.object_predict(results[i], data.header, cv_image))
+        # objArray.detections = []
+        # objArray.header = data.header
+        # object_count = 1
 
-        self.object_pub.publish(objArray)
+        # for i in range(len(results)):
+        #     box = results[i].boxes
+        #     xywh = box.xywh.numpy().astype(int)
+        #     cls = box.cls.numpy().astype(int)
+        #     score = box.conf.numpy().astype(float)
+        #     for j in range(len(cls)):
+        #         objArray.detections.append(self.object_predict(data.header, cls[j], xywh[j], score[j]))
+
+        # self.object_pub.publish(objArray)
 
         # img = cv2.cvtColor(image_np, cv2.COLOR_BGR2RGB)
         image_out = Image()
@@ -119,31 +131,28 @@ class Detector:
         image_out.header = data.header
         self.image_pub.publish(image_out)
 
-    def object_predict(self, result, header, image):
-        image_height, image_width, channels = image.shape
-        obj = Detection2D()
-        obj_hypothesis = ObjectHypothesisWithPose()
+    # def object_predict(self, header, cls , xywh, score):
+    #     # image_height, image_width, channels = image.shape
+    #     obj = Detection2D()
+    #     obj_hypothesis = ObjectHypothesisWithPose()
+
         
-        box = result.boxes
-        xywh = box.xywh.numpy().astype(int)
-        cls = box.cls.numpy().astype(int)
-        score = box.conf.numpy().astype(float)
+    #     # print("识别到ID:"+str(cls))
+    #     obj_hypothesis.id = cls
+    #     obj_hypothesis.score = score
+    #     obj.results.append(obj_hypothesis)
+        
+    #     obj.bbox.size_y = int(xywh[3])
+    #     obj.bbox.size_x = int(xywh[2])
+    #     obj.bbox.center.x = int(xywh[0])
+    #     obj.bbox.center.y = int(xywh[1])
 
-        object_id = cls[0]
-        object_score = score[0]
-        # dimensions = object_data[2]
+    #     # dimensions = object_data[2]
 
-        obj.header = header
-        obj_hypothesis.id = object_id
-        obj_hypothesis.score = object_score
-        obj.results.append(obj_hypothesis)
-        label = xywh[0]
-        obj.bbox.size_y = int(label[3])
-        obj.bbox.size_x = int(label[2])
-        obj.bbox.center.x = int(label[0])
-        obj.bbox.center.y = int(label[1])
+    #     obj.header = header
+        
 
-        return obj
+    #     return obj
 
 
 def main(args):

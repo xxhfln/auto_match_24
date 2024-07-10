@@ -84,8 +84,11 @@ class CamAction:
 
         # 根据yaml文件，确定抓取物品的id号
         self.search_id = [
-            items_content["items"][items_content["objects"]["objects_a"]]
+            items_content["items"][items_content["objects"]["objects_a"]],
+            items_content["items"][items_content["objects"]["objects_b"]],
+            items_content["items"][items_content["objects"]["objects_c"]]
         ]
+        # print(self.search_id)
 
     def detector(self):
         '''
@@ -364,7 +367,9 @@ class AutoAction:
         except Exception as e:  print("except cam:",e)
         print("========实例化Cam===== ")
         # 实例化Arm
-        try: self.arm = ArmAction()
+        try: 
+            self.arm = ArmAction()
+            # print("有arm")
         except Exception as e:  print("except arm:",e)
         print("========实例化Arm===== ")
         # 实例化Robot
@@ -379,7 +384,7 @@ class AutoAction:
 
         # 订阅机械臂手动控制的话题
         self.grasp_sub = rospy.Subscriber("grasp", String, self.grasp_cb)
-
+        
         rospy.loginfo("spark_auto_match_node is ready")
 
     # 接收到启动自动赛信号，开始执行任务
@@ -389,7 +394,9 @@ class AutoAction:
         self.arm.arm_home()  # 移动机械臂到其他地方
 
         # ===== 现在开始执行任务 =====
-        rospy.loginfo("start task now.")
+        # while True:
+        #     rospy.loginfo("1111S")
+        rospy.loginfo("start task now.start task now.start task now.start task now.start task now.")
 
         # ==== 离开起始区,避免在膨胀区域中，导致导航失败 =====
         self.robot.step_go(0.3)
@@ -409,8 +416,8 @@ class AutoAction:
 
         # 创建任务安排字典，设定前往的抓取地点与次数
         sorting_status_times = {
-            "Sorting_N":1,
-            "Sorting_W":1,
+            "Sorting_N":3,
+            "Sorting_W":3,
         }
         sorting_name = "Sorting_N"
 
@@ -435,10 +442,11 @@ class AutoAction:
             # =====识别并抓取物体====
             item_type = 0
             if ret: # 判断是否成功到达目标点
+                self.robot.step_go(0.2) # 往前靠一点
                 print("========扫描中，准备抓取===== ")
                 item_type = self.arm.grasp()  # 抓取物品并返回抓取物品的类型
-                print("========向后退一点===== ")
-                self.robot.step_back()  # 后退
+                # print("========向后退一点===== ")
+                # self.robot.step_back()  # 后退
 
                 if self.stop_flag: return
 
@@ -475,6 +483,7 @@ class AutoAction:
         rospy.logwarn("Or press Ctrl+C to exit the program")
 
     def task_cmd_cb(self,flag):
+        print(flag)
         if flag :
             if not self.task_run_th.is_alive():
                 self.stop_flag = False

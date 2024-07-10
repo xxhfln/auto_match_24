@@ -29,7 +29,7 @@
 		
 
 	<!-- tensorflow物体位置识别 -->
-	<node pkg= "auto_match" name="detect_ros" type="detect_ros.py"  output="screen"> 
+	<node pkg= "auto_match" name="detect_ros" type="detect_ros.py"  output="log"> 
 		<remap from="image" to="/camera/color/image_raw" if="$(eval arg('camera_type_tel')=='d435')"/>
 		<remap from="image" to="/camera/rgb/image_raw" if="$(eval arg('camera_type_tel')=='astrapro')"/>
 		<remap from="image" to="/camera/rgb/image_raw" if="$(eval arg('camera_type_tel')=='astra')"/>

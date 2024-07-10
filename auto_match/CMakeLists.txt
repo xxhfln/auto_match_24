@@ -121,7 +121,7 @@ catkin_package(
 # add_dependencies(spark_movebase ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
-# add_executable(spark_movebase_node src/spark_movebase_node.cpp)
+# add_executable(pub_flag nodes/pub_flag.py)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
