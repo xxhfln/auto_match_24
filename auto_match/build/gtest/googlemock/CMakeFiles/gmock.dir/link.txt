@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC -g  -shared -Wl,-soname,libgmockd.so -o ../lib/libgmockd.so CMakeFiles/gmock.dir/src/gmock-all.cc.o  -Wl,-rpath,/home/spark/Desktop/2/spark_noetic/src/3rd_app/auto_match_24/auto_match/build/gtest/lib ../lib/libgtestd.so -lpthread 

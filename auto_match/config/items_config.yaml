@@ -1,7 +1,10 @@
 items:
-  bear: 0
-  clock: 1
-  glass: 2
+  bear: 1
+  clock: 2
+  glass: 3
 objects:
-  objects_a: bear clock glass
+  objects_a: bear
+  objects_b: clock
+  objects_c: glass
+
 

@@ -84,8 +84,11 @@ class CamAction:
 
         # 根据yaml文件，确定抓取物品的id号
         self.search_id = [
-            items_content["items"][items_content["objects"]["objects_a"]]
+            items_content["items"][items_content["objects"]["objects_a"]],
+            items_content["items"][items_content["objects"]["objects_b"]],
+            items_content["items"][items_content["objects"]["objects_c"]]
         ]
+        # print(self.search_id)
 
     def detector(self):
         '''
@@ -157,7 +160,7 @@ class ArmAction:
             self.grasp_status_pub.publish(String("1"))
             return 0
 
-        cube_list = sorted(cube_list, key=lambda x: x[1][1], reverse=False)
+        cube_list = sorted(cube_list, key=lambda x: x[1][0], reverse=False)
 
         # 获取机械臂目标位置
         x = self.x_kb[0] * cube_list[0][1][1] + self.x_kb[1]
@@ -297,7 +300,7 @@ class RobotMoveAction:
         # 发布目标位置
         self.goto_local_pub.publish("go "+name)
 
-        # 设定1分钟的时间限制，进行阻塞等待
+        # 设定1分钟的时间限制，进行阻塞等待.
         try:
             ret_status = rospy.wait_for_message(
                 'move_base/result', MoveBaseActionResult, rospy.Duration(60)).status.status
@@ -364,7 +367,9 @@ class AutoAction:
         except Exception as e:  print("except cam:",e)
         print("========实例化Cam===== ")
         # 实例化Arm
-        try: self.arm = ArmAction()
+        try: 
+            self.arm = ArmAction()
+            # print("有arm")
         except Exception as e:  print("except arm:",e)
         print("========实例化Arm===== ")
         # 实例化Robot
@@ -380,6 +385,9 @@ class AutoAction:
         # 订阅机械臂手动控制的话题
         self.grasp_sub = rospy.Subscriber("grasp", String, self.grasp_cb)
 
+        # BCD分类字典
+        self.sort_dict = {}
+        
         rospy.loginfo("spark_auto_match_node is ready")
 
     # 接收到启动自动赛信号，开始执行任务
@@ -389,10 +397,12 @@ class AutoAction:
         self.arm.arm_home()  # 移动机械臂到其他地方
 
         # ===== 现在开始执行任务 =====
-        rospy.loginfo("start task now.")
+        # while True:
+        #     rospy.loginfo("1111S")
+        rospy.loginfo("start task now.start task now.start task now.start task now.start task now.")
 
         # ==== 离开起始区,避免在膨胀区域中，导致导航失败 =====
-        self.robot.step_go(0.3)
+        self.robot.step_go(0.4)
 
         if self.stop_flag: return
 
@@ -402,17 +412,34 @@ class AutoAction:
 
         # ===== 导航到分类区 =====
         if self.robot.goto_local("Classification_area"):
-            rospy.sleep(2)
+            while True:
+                # 寻找物品
+                sort_list = self.cam.detector()
+                if len(sort_list) == 3 and sort_list[0][0] != sort_list[1][0] and sort_list[0][0] != sort_list[2][0] and sort_list[1][0] != sort_list[2][0]:
+                    sort_list = sorted(sort_list, key=lambda x: x[1][0], reverse=False)
+                    print("sort_list:")
+                    print(sort_list)
+                    self.sort_dict["Collection_B"] = sort_list[0][0]
+                    self.sort_dict["Collection_C"] = sort_list[1][0]
+                    self.sort_dict["Collection_D"] = sort_list[2][0]
+
+                    rospy.sleep(2)
+                    break
+                else:
+                    continue
         else :
             rospy.logerr("Navigation to Classification_area failed,please run task again ")
             self.stop_flag = True
 
         # 创建任务安排字典，设定前往的抓取地点与次数
         sorting_status_times = {
-            "Sorting_N":1,
-            "Sorting_W":1,
+            "Sorting_N":3,
+            "Sorting_W":3,
+            "Sorting_E":3,
+            "Sorting_S":3,
         }
         sorting_name = "Sorting_N"
+        self.robot.step_back()  # 后退
 
         # =======开始循环运行前往中心区域抓取与放置任务======
         while True:
@@ -435,8 +462,11 @@ class AutoAction:
             # =====识别并抓取物体====
             item_type = 0
             if ret: # 判断是否成功到达目标点
+                # self.robot.step_go(0.1) # 往前靠一点
+                rospy.sleep(1)
                 print("========扫描中，准备抓取===== ")
                 item_type = self.arm.grasp()  # 抓取物品并返回抓取物品的类型
+                print("抓取的物体id:"+str(item_type))
                 print("========向后退一点===== ")
                 self.robot.step_back()  # 后退
 
@@ -450,8 +480,10 @@ class AutoAction:
             # ====放置物品====
             self.arm.arm_grasp_ready()
             print("========前往放置区===== ")
-            ret = self.robot.goto_local("Collection_B") # 根据抓到的物品类型，导航到对应的放置区
-            rospy.sleep(2) # 停稳
+            print("前往的地点:"+str(self.get_Collection(item_type)))
+            ret = self.robot.goto_local(self.get_Collection(item_type)) # 根据抓到的物品类型，导航到对应的放置区
+            
+            rospy.sleep(1) # 停稳
             if self.stop_flag: return
 
             if ret: 
@@ -475,6 +507,7 @@ class AutoAction:
         rospy.logwarn("Or press Ctrl+C to exit the program")
 
     def task_cmd_cb(self,flag):
+        print(flag)
         if flag :
             if not self.task_run_th.is_alive():
                 self.stop_flag = False
@@ -496,6 +529,11 @@ class AutoAction:
                 self.arm.arm_grasp_ready()
             else:
                 rospy.logwarn("grasp msg error")
+
+    def get_Collection(self, item_type):
+        for key, value in self.sort_dict.items():
+            if item_type == value:
+                return key
 
 
 if __name__ == '__main__':
